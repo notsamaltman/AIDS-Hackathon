@@ -1,4 +1,8 @@
 flask
 flask-cors
 joblib
-openai
+google-generativeai
+os
+numpy
+re
+json

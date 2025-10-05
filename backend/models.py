@@ -1,13 +1,17 @@
 import joblib
 import numpy as np
-from openai import OpenAI
+import google.generativeai as genai
+from dotenv import load_dotenv
 import json
 import re
+import os
 
-client = OpenAI(
-  base_url="https://openrouter.ai/api/v1",
-  api_key="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",
-)
+load_dotenv()
+API_KEY = os.getenv("MY_API_KEY")
+
+genai.configure(api_key=API_KEY)
+
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Load models
 vectorizer = joblib.load(r"c:\Users\Deepak\Documents\AIDS-Hackathon\backend\tfidf_vectorizer.joblib")
@@ -29,7 +33,6 @@ def predict(text):
 
     prompt = f"""
 You are a fact-checking assistant. Analyze the following text:
-
 {text}
 
 1. Overall verdict: FAKE / REAL / UNCERTAIN
@@ -58,42 +61,30 @@ Return the output strictly as JSON like:
 }}
 """
 
-    response = client.chat.completions.create(
-    model="gpt-5",
-    messages=[{"role": "user", "content": prompt}],
-    temperature=0
-)
-    raw_content = response.choices[0].message.content
+    response = model.generate_content(prompt)
 
-    # Remove ```json or ``` at the start and ``` at the end
-    cleaned = re.sub(r'^```json\s*|\s*```$', '', raw_content.strip(), flags=re.DOTALL)
+    raw_text = response.text
+    print(raw_text)
 
-    try:
-        llm_result = json.loads(cleaned)
-    except json.JSONDecodeError:
-        print("Invalid JSON from LLM:", cleaned)
-        # fallback to default structure
-        llm_result = {
-            "prediction": None,
-            "probability": 0,
-            "metrics": {
-                "languageComplexity": 0,
-                "emotionalTone": 0,
-                "factualDensity": 0,
-                "sourceCredibility": 0
-            },
-            "agreelinks": [],
-            "contradictlnks": [],
-            "reason": ""
-        }
+    # Remove the prefix 'json"""' and the trailing '"""'
+    if raw_text.startswith('```json'):
+        raw_text = raw_text[len('```json'):]
+    if raw_text.endswith('```'):
+        raw_text = raw_text[:-3]
+
+    # Now parse it as JSON
+    data = json.loads(raw_text)
+    print(data)
 
     # Combine TF-IDF word scores with LLM verdict
     result = {
-        "label": llm_result.get("prediction", "UNCERTAIN"),
-        "probability": llm_result.get("probability", 0),
-        "metrics": llm_result.get("metrics", {}),
+        "label": data.get("prediction", "UNCERTAIN"),
+        "probability": data.get("probability", 0)*0.9 + pred*0.1,
+        "metrics": data.get("metrics", {}),
         "word_scores": word_scores,
-        "reasoning": llm_result.get("reason"),
+        "agreelinks": data.get("agreelinks"),
+        "contradictlnks":data.get("contradictlnks"),
+        "reasoning": data.get("reason"),
     }
 
     return result

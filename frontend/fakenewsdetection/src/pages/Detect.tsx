@@ -30,7 +30,7 @@ const Detect = () => {
     }
 
     try {
-      const response = await fetch("https://99767aeec8fd.ngrok-free.app/analyze", {
+      const response = await fetch("https://5d96ffec1b93.ngrok-free.app/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

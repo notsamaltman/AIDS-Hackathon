@@ -1,2 +1,3 @@
 backend/WELFake_Dataset.csv
-frontend\fakenewsdetection\node_modules
+frontend/fakenewsdetection/node_modules
+backend/.env
