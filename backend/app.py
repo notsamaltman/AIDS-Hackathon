@@ -12,7 +12,7 @@ def analyze():
     if "text" not in data:
         return jsonify({"error": "Missing 'text' in request"}), 400
 
-    result = predict(data["text"])
+    result = predict(data["title"], data["text"])
     return jsonify(result)
 
 if __name__ == "__main__":

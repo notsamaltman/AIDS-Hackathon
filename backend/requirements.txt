@@ -2,6 +2,8 @@ flask
 flask-cors
 joblib
 google-generativeai
+requests
+beautifulsoup4
 os
 numpy
 re

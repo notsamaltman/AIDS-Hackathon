@@ -4,12 +4,16 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import json
 import re
+import requests
+from bs4 import BeautifulSoup
 import os
 
 load_dotenv()
-API_KEY = os.getenv("MY_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SEARCH_API_KEY = os.getenv("SEARCH_API")
+CX = os.getenv("ENGINE_ID")
 
-genai.configure(api_key=API_KEY)
+genai.configure(api_key=GEMINI_API_KEY)
 
 model = genai.GenerativeModel('gemini-2.5-flash')
 
@@ -18,19 +22,71 @@ vectorizer = joblib.load(r"c:\Users\Deepak\Documents\AIDS-Hackathon\backend\tfid
 clf = joblib.load(r"c:\Users\Deepak\Documents\AIDS-Hackathon\backend\logistic_model.joblib")
 
 def predict(text):
+    pred = predict_tfidf(text)
+    data = predict_model(text)
+
+    # Combine TF-IDF word scores with LLM verdict
+    result = {
+        "label": data.get("prediction", "UNCERTAIN"),
+        "probability": data.get("probability", 0)*0.9 + pred*0.1,
+        "metrics": data.get("metrics", {}),
+        "agreelinks": data.get("agreelinks"),
+        "contradictlnks":data.get("contradictlnks"),
+        "reasoning": data.get("reason"),
+    }
+
+    return result
+
+def search_google(query, num_results=3):
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "key": SEARCH_API_KEY,
+        "cx": CX,   
+        "q": query,
+        "num": num_results
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+    
+    # Extract URLs from results
+    urls = [item["link"] for item in data.get("items", [])]
+    return urls
+
+def scrape_urls(urls, max_pages=5, timeout=5):
+    """
+    Returns:
+        dict: Dictionary where keys are URLs and values are scraped text.
+    """
+    scraped_data = {}
+
+    for url in urls[:max_pages]:
+        try:
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            response = requests.get(url, headers=headers, timeout=timeout)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, "html.parser")
+            paragraphs = soup.find_all("p")
+            text = "\n".join([p.get_text().strip() for p in paragraphs if p.get_text().strip() != ""])
+
+            if text:
+                scraped_data[url] = text
+            else:
+                print(f"[WARNING] No content found at {url}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"[ERROR] Failed to fetch {url}: {e}")
+        except Exception as e:
+            print(f"[ERROR] Failed to scrape {url}: {e}")
+
+    return scraped_data
+
+def predict_tfidf(title, text):
     vec = vectorizer.transform([text])
-    prob = clf.predict_proba(vec)[0]
     pred = int(clf.predict(vec)[0])
+    return pred
 
-    # Word-level contribution scores
-    feature_names = vectorizer.get_feature_names_out()
-    word_scores = {}
-    words = text.lower().split()
-    for w in words:
-        if w in feature_names:
-            idx = np.where(feature_names == w)[0][0]
-            word_scores[w] = prob[1] * vec[0, idx]
-
+def predict_model(text):
     prompt = f"""
 You are a fact-checking assistant. Analyze the following text:
 {text}
@@ -74,20 +130,4 @@ Return the output strictly as JSON like:
 
     # Now parse it as JSON
     data = json.loads(raw_text)
-    print(data)
-
-    # Combine TF-IDF word scores with LLM verdict
-    result = {
-        "label": data.get("prediction", "UNCERTAIN"),
-        "probability": data.get("probability", 0)*0.9 + pred*0.1,
-        "metrics": data.get("metrics", {}),
-        "word_scores": word_scores,
-        "agreelinks": data.get("agreelinks"),
-        "contradictlnks":data.get("contradictlnks"),
-        "reasoning": data.get("reason"),
-    }
-
-    return result
-    
-
-    
+    return data
