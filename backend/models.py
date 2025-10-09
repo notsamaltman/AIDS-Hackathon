@@ -21,7 +21,7 @@ model = genai.GenerativeModel('gemini-2.5-flash')
 vectorizer = joblib.load(r"c:\Users\Deepak\Documents\AIDS-Hackathon\backend\tfidf_vectorizer.joblib")
 clf = joblib.load(r"c:\Users\Deepak\Documents\AIDS-Hackathon\backend\logistic_model.joblib")
 
-def predict(text):
+def predict(title, text):
     pred = predict_tfidf(text)
     data = predict_model(text)
 
@@ -81,12 +81,12 @@ def scrape_urls(urls, max_pages=5, timeout=5):
 
     return scraped_data
 
-def predict_tfidf(title, text):
+def predict_tfidf(text):
     vec = vectorizer.transform([text])
     pred = int(clf.predict(vec)[0])
     return pred
 
-def predict_model(text):
+def predict_model(title, text):
     prompt = f"""
 You are a fact-checking assistant. Analyze the following text:
 {text}
