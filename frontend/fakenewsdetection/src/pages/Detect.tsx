@@ -20,7 +20,7 @@ const Detect = () => {
     let payload: any = {};
 
     if (activeTab === "text") {
-      payload = { input: "text", text: `${title}\n${content}`, title:title};
+      payload = { input: "text", text: `${content}`, title:title};
     } else if (activeTab === "url") {
       payload = { text: url };
     } else {

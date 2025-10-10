@@ -18,11 +18,11 @@ genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Load models
-vectorizer = joblib.load(r"c:\Users\Deepak\Documents\AIDS-Hackathon\backend\tfidf_vectorizer.joblib")
-clf = joblib.load(r"c:\Users\Deepak\Documents\AIDS-Hackathon\backend\logistic_model.joblib")
+vectorizer = joblib.load("tfidf_vectorizer.joblib")
+clf = joblib.load("logistic_model.joblib")
 
-def predict(title, text):
-    pred = predict_tfidf(text)
+def pipeline(title, text):
+    pred = predict_tfidf(title+text)
     data = predict_model(text)
 
     # Combine TF-IDF word scores with LLM verdict
@@ -86,7 +86,7 @@ def predict_tfidf(text):
     pred = int(clf.predict(vec)[0])
     return pred
 
-def predict_model(title, text):
+def predict_model(title, text, latestcontext):
     prompt = f"""
 You are a fact-checking assistant. Analyze the following text:
 {text}

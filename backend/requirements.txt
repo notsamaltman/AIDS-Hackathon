@@ -4,7 +4,5 @@ joblib
 google-generativeai
 requests
 beautifulsoup4
-os
 numpy
-re
-json
+dotenv
