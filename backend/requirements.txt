@@ -4,5 +4,6 @@ joblib
 google-generativeai
 requests
 beautifulsoup4
+scikit-learn
 numpy
 dotenv
